@@ -1,0 +1,111 @@
+
+<div class="graph-container">
+
+<h2 class="title">Custom Graph Dashboard</h2>
+
+<!-- FILTER CARD -->
+<div class="filter-card">
+
+<div class="filter-grid">
+
+<!-- Metric -->
+<div class="input-group">
+<label>Metric</label>
+<select [(ngModel)]="metric">
+  <option value="">Select Metric</option>
+  <option value="request-in">Request In</option>
+  <option value="request-out">Request Out & TPS</option>
+  <option value="active-size">Active Size</option>
+  <option value="rtt">RTT</option>
+  <option value="val">VAL</option>
+  <option value="ppt">PPT</option>
+  <option value="top">TOP</option>
+  <option value="efficiency">Efficiency</option>
+  <option value="all">All</option>
+  <option value="typewise-timeseries">Typewise Time Graph</option>
+</select>
+</div>
+
+
+<!-- Date -->
+<div class="input-group">
+<label>Date</label>
+<input type="date" [(ngModel)]="date">
+</div>
+
+<!-- From -->
+<div class="input-group">
+<label>From Time</label>
+<input type="time" [(ngModel)]="fromTime">
+</div>
+
+<!-- To -->
+<div class="input-group">
+<label>To Time</label>
+<input type="time" [(ngModel)]="toTime">
+</div>
+
+<!-- Interval -->
+<div class="input-group">
+<label>Interval (sec)</label>
+<input type="number" [(ngModel)]="interval">
+</div>
+
+<!-- Download Type -->
+<div class="input-group">
+<label>Download Type</label>
+<select [(ngModel)]="downloadType">
+  <option value="">Select</option>
+  <option value="png">PNG</option>
+  <option value="pdf">PDF</option>
+  <option value="docx">DOCX</option>
+</select>
+</div>
+
+</div>
+
+<!-- BUTTON ROW -->
+<div class="button-row">
+
+<button class="primary-btn"
+(click)="loadCustomGraph()">
+Generate Graph
+</button>
+
+<button class="secondary-btn"
+(click)="downloadGraph()">
+Download
+</button>
+
+<button class="clear-btn"
+  (click)="clearForm()">
+  Clear
+</button>
+
+</div>
+
+</div>
+
+<!-- SINGLE MODE -->
+<div *ngIf="metric && metric !== 'all' && metric !== 'typewise-timeseries'" class="chart-card">  <div id="chart" class="chart-box"></div>
+</div>
+
+<!-- ALL MODE -->
+<div *ngIf="metric === 'all'" class="all-grid">
+
+  <div *ngFor="let m of allMetrics"
+       class="chart-wrapper">
+
+
+    <div [id]="'chart-' + m"
+         class="chart-box">
+    </div>
+
+  </div>
+
+</div>
+
+<!-- TYPEWISE GRAPH -->
+<div *ngIf="metric === 'typewise-timeseries'" class="typewise-container">
+<div id="chartsContainer"></div>
+</div>

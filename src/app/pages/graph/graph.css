@@ -1,0 +1,163 @@
+.graph-container{
+  padding:30px;
+}
+
+.title{
+  text-align:center;
+  margin-bottom:25px;
+  font-weight:600;
+}
+
+/* ================= CARD ================= */
+
+.filter-card{
+  background:#ffffff;
+  border-radius:14px;
+  padding:25px;
+  box-shadow:0 4px 18px rgba(0,0,0,0.08);
+}
+
+/* ================= GRID ================= */
+
+.filter-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
+  gap:20px;
+}
+
+/* ================= INPUT GROUP ================= */
+
+.input-group{
+  display:flex;
+  flex-direction:column;
+}
+
+.input-group label{
+  font-size:13px;
+  margin-bottom:6px;
+  font-weight:500;
+  color:#555;
+}
+
+/* SAME SIZE INPUT BOXES */
+
+.input-group input,
+.input-group select{
+  height:42px;
+  border-radius:8px;
+  border:1px solid #dcdcdc;
+  padding:8px 12px;
+  font-size:14px;
+  background:#f7f9fc;
+  transition:0.3s;
+}
+
+/* hover effect */
+
+.input-group input:focus,
+.input-group select:focus{
+  outline:none;
+  border-color:#4f7cff;
+  background:#fff;
+  box-shadow:0 0 0 2px rgba(79,124,255,0.15);
+}
+
+/* ================= BUTTONS ================= */
+
+.button-row{
+  margin-top:25px;
+  display:flex;
+  justify-content:center;
+  gap:20px;
+}
+
+.primary-btn{
+  background:#4f7cff;
+  color:white;
+  border:none;
+  padding:10px 26px;
+  border-radius:8px;
+  font-weight:500;
+  cursor:pointer;
+}
+
+.primary-btn:hover{
+  background:#3a63db;
+}
+
+.secondary-btn{
+  background:#1f2937;
+  color:white;
+  border:none;
+  padding:10px 26px;
+  border-radius:8px;
+  cursor:pointer;
+}
+
+.secondary-btn:hover{
+  background:#111827;
+}
+
+/* ================= CHART ================= */
+
+.chart-box{
+  margin-top:30px;
+  height:520px;
+  background:white;
+  border-radius:14px;
+  box-shadow:0 4px 18px rgba(0,0,0,0.08);
+}
+.clear-btn{
+  background:#ef4444;
+  color:white;
+  border:none;
+  padding:10px 20px;
+  border-radius:6px;
+  margin-left:10px;
+  cursor:pointer;
+}
+
+.clear-btn:hover{
+  background:#dc2626;
+}
+
+.chart-box {
+  background: #fff;
+  padding: 15px;
+  margin-top: 20px;
+  border-radius: 8px;
+}
+
+.typewise-container {
+  margin-top: 10px;
+}
+
+.typewise-card {
+  background: #ffffff;
+  border-radius: 14px;
+
+  padding: 20px;
+  margin-top: 30px;        /* ⭐ ADD THIS */
+  
+  box-shadow: 0 4px 18px rgba(0,0,0,0.08);
+}
+
+.typewise-title {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 10px;
+  color: #333;
+}
+
+.typewise-chart {
+  width: 100%;
+  height: 470px;   /* ⭐ MATCH chart-box */
+}
+#chartsContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.chart-wrapper {
+  width: 100%;
+}

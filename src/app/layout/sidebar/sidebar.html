@@ -1,0 +1,27 @@
+<div class="sidebar">
+
+  <h3 class="logo">Log Analytics</h3>
+
+  <ul>
+
+    <li>
+      <a [routerLink]="getRoute('/processing')">
+        📊 Processing
+      </a>
+    </li>
+
+    <li [class.disabled]="!completed">
+      <a [routerLink]="getRoute('/excel')">
+        📄 Excel Dashboard
+      </a>
+    </li>
+
+    <li [class.disabled]="!completed">
+      <a [routerLink]="getRoute('/graph')">
+        📈 Graph Dashboard
+      </a>
+    </li>
+
+  </ul>
+
+</div>

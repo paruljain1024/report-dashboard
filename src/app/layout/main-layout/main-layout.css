@@ -1,0 +1,15 @@
+.layout{
+  display:flex;
+}
+
+.content{
+  flex:1;
+  display:flex;
+  flex-direction:column;
+}
+
+.page{
+  padding:20px;
+  background:#ffffff;
+  height:calc(100vh - 60px);
+}

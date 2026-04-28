@@ -1,0 +1,66 @@
+<div class="page-container">
+
+<h2 class="page-title">Excel Analytics Dashboard</h2>
+
+<div class="card">
+
+<div class="input-group center-input">
+
+<button (click)="downloadFullReport()">
+  Download Full Report
+</button> 
+<label>Select Analytics</label>
+
+<select
+[(ngModel)]="selectedAnalytics"
+(change)="loadAnalytics()">
+
+<option value="">Select Analytics</option>
+<option value="summary">Request Summary</option>
+<option value="performance">Transaction Time Summary</option>
+<option value="processing">Processing Time</option>
+<option value="active">Active Size</option>
+<option value="transaction">PreTUPS Transaction Time</option>
+<option value="response">Error Code Summary</option>
+
+</select>
+
+</div>
+<h3 class="table-title" *ngIf="tableData.length">
+  {{tableTitle}}
+</h3>
+<!-- TABLE -->
+<div class="table-wrapper" *ngIf="!loading && tableData.length">
+
+<table>
+
+<tr>
+<th *ngFor="let col of columns">
+{{ getColumnName(col) }}
+</th>
+</tr>
+
+<tr *ngFor="let row of tableData">
+<td *ngFor="let col of columns"
+    [class.failed]="col === 'failed' && row[col] > 0">
+{{ formatValue(row[col]) }}
+</td>
+</tr>
+
+</table>
+
+</div>
+
+<div class="button-row" *ngIf="tableData.length">
+
+<button class="primary-btn"
+(click)="downloadExcel()">
+
+Download Excel
+
+</button>
+
+</div>
+</div>
+
+</div>
