@@ -2,7 +2,6 @@ import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../core/services/api.service';
-import { AppStateService } from '../../core/services/app-state.service';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
 
@@ -30,28 +29,9 @@ export class ExcelComponent {
   transactionData:any[]=[];
   uniqueData:any[]=[];
 
-  constructor(
-    private api: ApiService,
-    private state: AppStateService
-  ){}
-
-  private getJobId() {
-    const jobId = this.state.getJobId();
-
-    if (!jobId) {
-      alert('Process logs first');
-    }
-
-    return jobId;
-  }
+  constructor(private api:ApiService){}
 
   loadAnalytics(){
-  const jobId = this.getJobId();
-
-  if (!jobId) {
-    this.loading = false;
-    return;
-  }
 
   this.loading = true;
 
@@ -72,7 +52,7 @@ export class ExcelComponent {
     return;
   }
 
-  this.api.getTypes(jobId).subscribe((d:any[])=>{
+  this.api.getTypes().subscribe((d:any[])=>{
     this.summaryData=d;
     this.processSummaryData(d);
     this.loading=false;
@@ -93,7 +73,7 @@ export class ExcelComponent {
         return;
       }
 
-      this.api.getPerformance(jobId).subscribe((d:any[])=>{
+      this.api.getPerformance().subscribe((d:any[])=>{
         this.performanceData=d;
         this.columns=['type','min','avg','max'];
         this.tableData=d;
@@ -106,7 +86,7 @@ export class ExcelComponent {
     /* ================= PROCESSING ================= */
     case 'processing':
 this.tableTitle = 'Processing Time Analysis in ms';
-this.api.getProcessingTime(jobId).subscribe((data:any[])=>{
+this.api.getProcessingTime().subscribe((data:any[])=>{
 
   const rangesSet = new Set<string>();
 
@@ -145,7 +125,7 @@ break;
     case 'active':
       this.tableTitle = 'Active Size Analysis';
 
-  this.api.getActiveSize(jobId).subscribe((d:any)=>{
+  this.api.getActiveSize().subscribe((d:any)=>{
 
   this.columns=['min','avg','max'];
 
@@ -160,7 +140,7 @@ break;
     case 'transaction':
     this.tableTitle = 'PreTUPS Transaction Time (PPT)';
 
-  this.api.getTransactionTime(jobId).subscribe((d:any)=>{
+  this.api.getTransactionTime().subscribe((d:any)=>{
 
   this.columns=['maximum','average'];
 
@@ -175,7 +155,7 @@ break;
   case 'response':
     this.tableTitle = 'Error Code Summary';
 
-  this.api.getResponseCodes(jobId).subscribe((d:any)=>{
+  this.api.getResponseCodes().subscribe((d:any)=>{
 
   this.columns=['response','count'];
 
@@ -291,13 +271,7 @@ getColumnName(col:string){
 
 downloadFullReport(){
 
- const jobId = this.getJobId();
-
- if (!jobId) {
-   return;
- }
-
- this.api.downloadFormatted(jobId).subscribe(blob => {
+ this.api.downloadFormatted().subscribe(blob => {
 
    const file = new Blob([blob], {
      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'

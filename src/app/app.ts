@@ -42,7 +42,7 @@ export class AppComponent implements OnInit {
   }
 
   private resetAfterRefresh() {
-    this.state.clearJobState();
+    this.state.clearProcessingState();
     localStorage.removeItem('currentUser');
 
     if (this.router.url !== this.processingRoute) {

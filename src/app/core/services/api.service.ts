@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 
 @Injectable({
@@ -7,112 +7,68 @@ import { environment } from '../../../environments/environment';
 })
 export class ApiService {
 
-  baseUrl = environment.apiUrl;
+  baseUrl = 'http://localhost:5596';
 
   constructor(private http: HttpClient) {}
 
-  // ❌ REMOVED jobId param (IMPORTANT FIX)
-  checkLogs() {
+  // ✅ FIXED: return JSON (not text)
+  startProcessing(){
+    return this.http.get<any>(`${this.baseUrl}/process/run`);
+  }
+
+  checkLogs(){
     return this.http.get<any>(`${this.baseUrl}/process/check`);
   }
-  
-  startProcessing() {
-  return this.http.get<{ started: boolean; jobId: string; message: string }>(
-    `${this.baseUrl}/process/run`
-  );
-}
 
-  getProcessingStatus(jobId: string) {
-    return this.http.get<any>(`${this.baseUrl}/process/status`, {
-      params: new HttpParams().set('jobId', jobId)
-    });
+  getProcessingStatus(){
+    return this.http.get<any>(`${this.baseUrl}/process/status`);
   }
 
-  // (keep rest same)
-
-  getSummary(jobId: string) {
-    return this.http.get<any[]>(`${this.baseUrl}/api/excel/summary`, {
-      params: new HttpParams().set('jobId', jobId)
-    });
+  getSummary(){
+    return this.http.get<any[]>(`${this.baseUrl}/api/excel/summary`);
   }
 
-  getTypes(jobId: string) {
-    return this.http.get<any[]>(`${this.baseUrl}/api/excel/types`, {
-      params: new HttpParams().set('jobId', jobId)
-    });
+  getTypes(){
+    return this.http.get<any[]>(`${this.baseUrl}/api/excel/types`);
   }
 
-  getResponseCodes(jobId: string) {
-    return this.http.get<any[]>(`${this.baseUrl}/api/excel/response-codes`, {
-      params: new HttpParams().set('jobId', jobId)
-    });
+  getResponseCodes(){
+    return this.http.get<any[]>(`${this.baseUrl}/api/excel/response-codes`);
   }
 
-  getPerformance(jobId: string) {
-    return this.http.get<any[]>(`${this.baseUrl}/api/excel/performance`, {
-      params: new HttpParams().set('jobId', jobId)
-    });
+  getPerformance(){
+    return this.http.get<any[]>(`${this.baseUrl}/api/excel/performance`);
   }
 
-  getProcessingTime(jobId: string) {
-    return this.http.get<any[]>(`${this.baseUrl}/api/excel/processing-time`, {
-      params: new HttpParams().set('jobId', jobId)
-    });
+  getProcessingTime(){
+    return this.http.get<any[]>(`${this.baseUrl}/api/excel/processing-time`);
   }
 
-  getActiveSize(jobId: string) {
-    return this.http.get<any[]>(`${this.baseUrl}/api/excel/active-size`, {
-      params: new HttpParams().set('jobId', jobId)
-    });
+  getActiveSize(){
+    return this.http.get<any[]>(`${this.baseUrl}/api/excel/active-size`);
   }
 
-  getTransactionTime(jobId: string) {
-    return this.http.get<any[]>(`${this.baseUrl}/api/excel/transaction-time`, {
-      params: new HttpParams().set('jobId', jobId)
-    });
+  getTransactionTime(){
+    return this.http.get<any[]>(`${this.baseUrl}/api/excel/transaction-time`);
   }
 
-  getCustomGraph(
-    jobId: string,
-    metric: string,
-    date: string,
-    from: string,
-    to: string,
-    interval: number
-  ) {
-    let params = new HttpParams()
-      .set('jobId', jobId)
-      .set('metric', metric)
-      .set('interval', interval);
-
-    if (date) params = params.set('date', date);
-    if (from) params = params.set('from', from);
-    if (to) params = params.set('to', to);
-
-    return this.http.get<any[]>(`${this.baseUrl}/api/filter/custom`, { params });
-  }
-
-  getMetricGraph(jobId: string, metric: string) {
-    const params = new HttpParams()
-      .set('jobId', jobId)
-      .set('metric', metric);
-
-    return this.http.get<any[]>(`${this.baseUrl}/api/filter/custom`, { params });
-  }
-
-  downloadFormatted(jobId: string) {
-    return this.http.get(
-      `${this.baseUrl}/api/excel/download-formatted`,
-      {
-        params: new HttpParams().set('jobId', jobId),
-        responseType: 'blob'
-      }
+  getCustomGraph(metric:string, date:string, from:string, to:string, interval:number){
+    return this.http.get<any[]>(
+      `${this.baseUrl}/api/filter/custom?metric=${metric}&date=${date}&from=${from}&to=${to}&interval=${interval}`
     );
   }
 
-  getTypewiseTimeSeries(jobId: string) {
-    return this.http.get(`${this.baseUrl}/api/chart/typewise-timeseries`, {
-      params: new HttpParams().set('jobId', jobId)
+  getMetricGraph(metric:string){
+    return this.http.get<any[]>(`${this.baseUrl}/api/filter/custom?metric=${metric}`);
+  }
+
+  downloadFormatted(){
+    return this.http.get(`${this.baseUrl}/api/excel/download-formatted`, {
+      responseType: 'blob'
     });
+  }
+
+  getTypewiseTimeSeries() {
+    return this.http.get(`${this.baseUrl}/api/chart/typewise-timeseries`);
   }
 }

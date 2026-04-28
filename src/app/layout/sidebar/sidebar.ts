@@ -5,46 +5,48 @@ import { AppStateService } from '../../core/services/app-state.service';
 import { ApiService } from '../../core/services/api.service';
 
 @Component({
-  selector: 'app-sidebar',
-  standalone: true,
-  imports: [
+  selector:'app-sidebar',
+  standalone:true,
+  imports:[
     CommonModule,
-    RouterModule
+    RouterModule   // ⭐ REQUIRED
   ],
-  templateUrl: './sidebar.html',
-  styleUrl: './sidebar.css'
+  templateUrl:'./sidebar.html',
+  styleUrl:'./sidebar.css'
 })
 export class SidebarComponent {
 
   completed = false;
 
   constructor(
-    private state: AppStateService,
-    private api: ApiService
-  ) {
-    this.state.processingCompleted$
-      .subscribe(v => this.completed = v);
+  private state: AppStateService,
+  private api: ApiService
+){
 
-    this.checkBackendStatus();
-  }
+  // listen to global updates
+  this.state.processingCompleted$
+    .subscribe(v => this.completed = v);
 
-  checkBackendStatus() {
-    const jobId = this.state.getJobId();
+  // ⭐ restore state from backend
+  this.checkBackendStatus();
+}
+checkBackendStatus(){
 
-    if (!jobId) {
+  this.api.getProcessingStatus()
+  .subscribe((res:any) => {
+
+    if(res.status === 'COMPLETED'){
+      this.completed = true;
+      this.state.setCompleted(true);
       return;
     }
 
-    this.api.getProcessingStatus(jobId)
-      .subscribe((res: any) => {
-        if (res.status === 'COMPLETED') {
-          this.completed = true;
-          this.state.setCompleted(true);
-        }
-      });
-  }
+    this.completed = false;
+    this.state.setCompleted(false);
 
-  getRoute(path: string) {
-    return this.completed || path === '/processing' ? path : null;
-  }
+  });
+}
+getRoute(path: string){
+  return path;
+}
 }
