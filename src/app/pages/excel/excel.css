@@ -6,6 +6,11 @@
   text-align:center;
   margin-bottom:30px;
   font-weight:600;
+  background: linear-gradient(90deg, #0b0b0b, #9ca3af);
+  -webkit-background-clip: text;
+  color: transparent;
+
+  animation: fadeIn 0.6s ease;
 }
 
 /* ================= CARD ================= */

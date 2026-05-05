@@ -1,20 +1,18 @@
-<div class="page-container">
+<div class="content-wrapper">
+
+  <h2 class="page-title">Log Processing Dashboard</h2>
+
+  <div class="card center-card">
+    <div class="page-container">
 
   <!-- ✅ SUCCESS POPUP -->
   <div *ngIf="showSuccess" class="success-popup">
     ✅ {{ successMessage }}
   </div>
 
-  <h2 class="page-title">Log Processing Dashboard</h2>
-
-  <div class="card center-card">
-
     <!-- USER INPUT -->
     <div class="user-row">
 
-      <div class="user-label-box">
-        User
-      </div>
 
       <input
         type="text"
@@ -50,17 +48,29 @@
       <!-- 🔄 PROCESSING STATE -->
       <div *ngIf="processing">
 
-        <p>Processing logs...</p>
-
         <div class="progress-container">
           <div class="progress-bar" [style.width]="progress + '%'">
             {{ progress }}%
           </div>
         </div>
 
-        <p class="speed-text">
-          Processing speed: {{ speed }} lines/sec
+        <p *ngIf="startTime">
+
+          ⏱ Start: {{ startTime }}
         </p>
+
+        <!--<p class="speed-text">
+          Processing speed: {{ speed }} lines/sec
+        </p>-->
+
+      </div>
+
+      <!-- 🔥 SHOW DATA ACCESS EVEN DURING PROCESSING -->
+      <div *ngIf="hasData">
+
+      <p class="success-text">
+          📊 Data available
+      </p>
 
       </div>
 
@@ -77,10 +87,27 @@
           </div>
         </div>
 
+        <p *ngIf="startTime">
+
+          ⏱ Start: {{ startTime }}
+        </p>
+
+        <p *ngIf="endTime">
+          ✅ End: {{ endTime }}
+        </p>
+
       </div>
+      <button
+       class="secondary-btn"
+       *ngIf="completed"
+       (click)="reprocessLogs()">
+        Reprocess Logs
+      </button>
+      
 
     </div>
 
   </div>
 
+</div>
 </div>

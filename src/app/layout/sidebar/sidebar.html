@@ -1,27 +1,28 @@
 <div class="sidebar">
 
-  <h3 class="logo">Log Analytics</h3>
+  <!-- LOGO -->
+  <div class="logo">
+    <span class="brand">Log Analytics</span>
+  </div>
 
-  <ul>
+  <!-- MENU -->
+  <div class="menu">
 
-    <li>
-      <a [routerLink]="getRoute('/processing')">
-        📊 Processing
-      </a>
-    </li>
+    <a routerLink="/processing" routerLinkActive="active" class="menu-item">
+      <span>📊</span>
+      <span>Processing</span>
+    </a>
 
-    <li [class.disabled]="!completed">
-      <a [routerLink]="getRoute('/excel')">
-        📄 Excel Dashboard
-      </a>
-    </li>
+    <a routerLink="/excel" routerLinkActive="active" class="menu-item">
+      <span>📄</span>
+      <span>Excel Dashboard</span>
+    </a>
 
-    <li [class.disabled]="!completed">
-      <a [routerLink]="getRoute('/graph')">
-        📈 Graph Dashboard
-      </a>
-    </li>
+    <a routerLink="/graph" routerLinkActive="active" class="menu-item">
+      <span>📈</span>
+      <span>Graph Dashboard</span>
+    </a>
 
-  </ul>
+  </div>
 
 </div>

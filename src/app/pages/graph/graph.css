@@ -2,10 +2,16 @@
   padding:30px;
 }
 
-.title{
-  text-align:center;
-  margin-bottom:25px;
-  font-weight:600;
+.title {
+  font-size: 32px;
+  text-align: center;
+  font-weight: 700;
+  margin-bottom: 30px;
+  background: linear-gradient(90deg, #0b0b0b, #9ca3af);
+  -webkit-background-clip: text;
+  color: transparent;
+
+  animation: fadeIn 0.6s ease;
 }
 
 /* ================= CARD ================= */
@@ -160,4 +166,26 @@
 }
 .chart-wrapper {
   width: 100%;
+}
+.filter-card {
+  background: rgba(255,255,255,0.05);
+  backdrop-filter: blur(16px);
+  border-radius: 16px;
+  padding: 20px;
+  margin-bottom: 30px;
+}
+
+.chart-card {
+  background: rgba(255,255,255,0.05);
+  border-radius: 16px;
+  padding: 20px;
+  animation: fadeInUp 0.6s ease;
+}
+
+.chart-box {
+  height: 400px;
+}
+.graph-container {
+  padding: 40px;
+  min-height: 100%;
 }

@@ -1,77 +1,82 @@
-
-ul{
-  list-style:none;
-  padding:0;
-}
-
-li{
-  padding:12px;
-  cursor:pointer;
-  border-radius:6px;
-  margin-bottom:10px;
-}
-
-li:hover{
-  background:#ccd6ea;
-}
-.disabled{
-  pointer-events: none;
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-.sidebar a{
-  display:block;
-  color:white;
-  text-decoration:none;
-  padding:10px;
-}
-
-.disabled a{
-  pointer-events:none;
-  opacity:0.4;
-  cursor:not-allowed;
-}
-
 .sidebar {
-  width: 240px;
+  width: 260px;
   height: 100vh;
-  background: linear-gradient(180deg, #1f2a44, #111827);
-  color: white;
-  padding: 20px 10px;
+
+  background: none;
+  padding: 20px 15px;
+
   display: flex;
   flex-direction: column;
 }
 
+/* LOGO */
 .logo {
-  font-size: 22px;
-  font-weight: 600;
-  text-align: center;
   margin-bottom: 30px;
-  letter-spacing: 1px;
+  padding-left: 10px;
 }
 
-.sidebar ul {
-  list-style: none;
-  padding: 0;
+.brand {
+  color: #f1f5f6;
+  font-size: 22px;
+  font-weight: bold;
 }
 
-.sidebar ul li {
+.sub {
+  display: block;
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+/* MENU */
+.menu {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* MENU ITEM */
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
   padding: 12px 16px;
-  margin: 8px 0;
-  border-radius: 10px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  font-size: 15px;
+  border-radius: 12px;
+
+  color: #cbd5f5;
+  text-decoration: none;
+  font-size: 14px;
+
+  background: rgba(255,255,255,0.03);
+
+  transition: all 0.25s ease;
 }
 
-/* ✨ Hover effect */
-.sidebar ul li:hover {
-  background: rgba(255, 255, 255, 0.1);
+/* HOVER */
+.menu-item:hover {
+  background: rgba(99,102,241,0.15);
   transform: translateX(5px);
 }
 
-/* 🔥 Active tab */
-.sidebar ul li.active {
+/* ACTIVE */
+.menu-item.active {
   background: linear-gradient(90deg, #4f46e5, #6366f1);
-  box-shadow: 0 4px 10px rgba(99, 102, 241, 0.4);
+  color: white;
+  box-shadow: 0 6px 20px rgba(99,102,241,0.4);
+}
+
+/* DISABLED */
+.menu-item.disabled {
+  opacity: 0.4;
+}
+.menu-item.active::before {
+  content: "";
+  
+  left: 0;
+  width: 4px;
+  height: 100%;
+  background: #6366f1;
+}
+.layout {
+  
 }

@@ -26,4 +26,15 @@ export class AppStateService {
     localStorage.removeItem(AppStateService.PROCESSING_COMPLETED_KEY);
     this.processingCompleted.next(false);
   }
+  private hasData = new BehaviorSubject<boolean>(false);
+
+  hasData$ = this.hasData.asObservable();
+
+  setHasData(value: boolean){
+    this.hasData.next(value);
+  }
+
+  getHasData(){
+    return this.hasData.value;
+  }
 }

@@ -3,6 +3,8 @@ import { MainLayoutComponent } from './layout/main-layout/main-layout';
 import { ProcessingComponent } from './pages/processing/processing';
 import { ExcelComponent } from './pages/excel/excel';
 import { GraphComponent } from './pages/graph/graph';
+import { completedGuard } from './core/services/guards/completed.guard';
+
 export const routes: Routes = [
 
 {
@@ -18,12 +20,14 @@ export const routes: Routes = [
 
     {
       path:'excel',
+      canActivate: [completedGuard],
       loadComponent:()=>import('./pages/excel/excel')
       .then(m=>m.ExcelComponent)
     },
 
     {
       path:'graph',
+      canActivate: [completedGuard],
       loadComponent:() =>
       import('./pages/graph/graph')
       .then(m=>m.GraphComponent)

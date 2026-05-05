@@ -7,7 +7,7 @@ import { environment } from '../../../environments/environment';
 })
 export class ApiService {
 
-  baseUrl = 'http://localhost:5596';
+  baseUrl = 'http://172.16.10.239:5596';   // ✅ NO trailing slash
 
   constructor(private http: HttpClient) {}
 
