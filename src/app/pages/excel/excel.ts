@@ -1,7 +1,10 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+
 import { ApiService } from '../../core/services/api.service';
+import { AppStateService } from '../../core/services/app-state.service';
+
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
 
@@ -15,6 +18,7 @@ import { saveAs } from 'file-saver';
 export class ExcelComponent {
 
   currentUser: string = '';
+
   selectedAnalytics = '';
   tableTitle='';
 
@@ -22,6 +26,7 @@ export class ExcelComponent {
   columns:string[]=[];
 
   loading=false;
+
   summaryData:any[]=[];
   performanceData:any[]=[];
   processingData:any[]=[];
@@ -29,259 +34,388 @@ export class ExcelComponent {
   transactionData:any[]=[];
   uniqueData:any[]=[];
 
-  constructor(private api:ApiService){}
+  constructor(
+    private api:ApiService,
+    private state: AppStateService
+  ){}
 
   loadAnalytics(){
 
-  this.loading = true;
+    this.loading = true;
 
-  switch(this.selectedAnalytics){
+    switch(this.selectedAnalytics){
 
-    /* ================= SUMMARY ================= */
-  case 'summary':
-    this.tableTitle = 'Request Summary';
+      /* ================= SUMMARY ================= */
 
-  const user =
-    localStorage.getItem('currentUser') || '';
+      case 'summary':
 
-  this.currentUser = user;
+        this.tableTitle = 'Request Summary';
 
-  if(this.summaryData.length){
-    this.processSummaryData(this.summaryData);
-    this.loading=false;
-    return;
+        // 🔥 FIXED USER RESTORE
+        this.currentUser =
+          this.state.getUser() || '';
+
+        if(this.summaryData.length){
+
+          this.processSummaryData(
+            this.summaryData
+          );
+
+          this.loading=false;
+
+          return;
+        }
+
+        this.api.getTypes().subscribe((d:any[])=>{
+
+          this.summaryData=d;
+
+          this.processSummaryData(d);
+
+          this.loading=false;
+        });
+
+      break;
+
+      /* ================= PERFORMANCE ================= */
+
+      case 'performance':
+
+        this.tableTitle =
+          'Transaction Time Summary';
+
+        if(this.performanceData.length){
+
+          this.columns=[
+            'type',
+            'min',
+            'avg',
+            'max'
+          ];
+
+          this.tableData =
+            this.performanceData;
+
+          this.loading=false;
+
+          return;
+        }
+
+        this.api.getPerformance()
+        .subscribe((d:any[])=>{
+
+          this.performanceData=d;
+
+          this.columns=[
+            'type',
+            'min',
+            'avg',
+            'max'
+          ];
+
+          this.tableData=d;
+
+          this.loading=false;
+        });
+
+      break;
+
+      /* ================= PROCESSING ================= */
+
+      case 'processing':
+
+        this.tableTitle =
+          'Processing Time Analysis in ms';
+
+        this.api.getProcessingTime()
+        .subscribe((data:any[])=>{
+
+          const rangesSet =
+            new Set<string>();
+
+          data.forEach(t=>{
+
+            t.ranges.forEach((r:any)=>{
+
+              rangesSet.add(r.range);
+            });
+          });
+
+          const ranges =
+            Array.from(rangesSet);
+
+          this.columns = [
+            'type',
+            ...ranges
+          ];
+
+          this.tableData =
+            data.map(item=>{
+
+            const row:any = {
+              type:item.type
+            };
+
+            ranges.forEach(r=>{
+
+              const found =
+                item.ranges.find(
+                  (x:any)=>x.range===r
+                );
+
+              row[r] =
+                found ? found.count : 0;
+            });
+
+            return row;
+          });
+
+          this.loading=false;
+        });
+
+      break;
+
+      /* ================= ACTIVE ================= */
+
+      case 'active':
+
+        this.tableTitle =
+          'Active Size Analysis';
+
+        this.api.getActiveSize()
+        .subscribe((d:any)=>{
+
+          this.columns=[
+            'min',
+            'avg',
+            'max'
+          ];
+
+          this.tableData=[d];
+
+          this.loading=false;
+        });
+
+      break;
+
+      /* ================= TRANSACTION ================= */
+
+      case 'transaction':
+
+        this.tableTitle =
+          'PreTUPS Transaction Time (PPT)';
+
+        this.api.getTransactionTime()
+        .subscribe((d:any)=>{
+
+          this.columns=[
+            'maximum',
+            'average'
+          ];
+
+          this.tableData=[d];
+
+          this.loading=false;
+        });
+
+      break;
+
+      /* ================= RESPONSE ================= */
+
+      case 'response':
+
+        this.tableTitle =
+          'Error Code Summary';
+
+        this.api.getResponseCodes()
+        .subscribe((d:any)=>{
+
+          this.columns=[
+            'response',
+            'count'
+          ];
+
+          this.tableData =
+            Object.keys(d).map(key=>({
+
+            response:key,
+            count:d[key]
+          }));
+
+          this.loading=false;
+        });
+
+      break;
+    }
   }
 
-  this.api.getTypes().subscribe((d:any[])=>{
-    this.summaryData=d;
-    this.processSummaryData(d);
-    this.loading=false;
-  });
-  
+  // =====================================================
+  // DOWNLOAD EXCEL
+  // =====================================================
 
-  break;
-
-
-    /* ================= PERFORMANCE ================= */
-    case 'performance':
-      this.tableTitle = 'Transaction Time Summary';
-
-      if(this.performanceData.length){
-        this.columns=['type','min','avg','max']; // metric removed ✅
-        this.tableData=this.performanceData;
-        this.loading=false;
-        return;
-      }
-
-      this.api.getPerformance().subscribe((d:any[])=>{
-        this.performanceData=d;
-        this.columns=['type','min','avg','max'];
-        this.tableData=d;
-        this.loading=false;
-      });
-      
-    break;
-
-
-    /* ================= PROCESSING ================= */
-    case 'processing':
-this.tableTitle = 'Processing Time Analysis in ms';
-this.api.getProcessingTime().subscribe((data:any[])=>{
-
-  const rangesSet = new Set<string>();
-
-  // collect all ranges
-  data.forEach(t=>{
-    t.ranges.forEach((r:any)=>{
-      rangesSet.add(r.range);
-    });
-  });
-
-  const ranges = Array.from(rangesSet);
-
-  // column headers
-  this.columns = ['type', ...ranges];
-
-  this.tableData = data.map(item=>{
-
-    const row:any = { type:item.type };
-
-    ranges.forEach(r=>{
-      const found =
-        item.ranges.find((x:any)=>x.range===r);
-
-      row[r] = found ? found.count : 0;
-    });
-
-    return row;
-  });
-
-  this.loading=false;
-});
-break;
-
-
-    /* ================= ACTIVE ================= */
-    case 'active':
-      this.tableTitle = 'Active Size Analysis';
-
-  this.api.getActiveSize().subscribe((d:any)=>{
-
-  this.columns=['min','avg','max'];
-
-  this.tableData=[d];   // ✅ convert object → array
-
-  this.loading=false;
-  });
-  break;
-
-
-    /* ================= TRANSACTION ================= */
-    case 'transaction':
-    this.tableTitle = 'PreTUPS Transaction Time (PPT)';
-
-  this.api.getTransactionTime().subscribe((d:any)=>{
-
-  this.columns=['maximum','average'];
-
-  this.tableData=[d];
-
-  this.loading=false;
-  });
-  break;
-//unique-response
-
-
-  case 'response':
-    this.tableTitle = 'Error Code Summary';
-
-  this.api.getResponseCodes().subscribe((d:any)=>{
-
-  this.columns=['response','count'];
-
-  this.tableData =
-    Object.keys(d).map(key=>({
-      response:key,
-      count:d[key]
-    }));
-
-  this.loading=false;
-  });
-  break;
-  }
-  }
   downloadExcel() {
 
-  if (!this.tableData.length) {
-    alert("No data to download");
-    return;
-  }
+    if (!this.tableData.length) {
 
-  const worksheet =
-    XLSX.utils.json_to_sheet(this.tableData);
+      alert("No data to download");
 
-  const workbook =
-    XLSX.utils.book_new();
-
-  XLSX.utils.book_append_sheet(
-    workbook,
-    worksheet,
-    'Analytics'
-  );
-
-  const excelBuffer =
-    XLSX.write(workbook, {
-      bookType: 'xlsx',
-      type: 'array'
-    });
-
-  const blob = new Blob(
-    [excelBuffer],
-    {
-      type:
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      return;
     }
-  );
 
-  saveAs(blob, 'analytics-report.xlsx');
-}
-formatValue(value:any){
-  return !isNaN(value)
-    ? Number(value).toFixed(2)
-    : value;
-}
+    const worksheet =
+      XLSX.utils.json_to_sheet(
+        this.tableData
+      );
 
+    const workbook =
+      XLSX.utils.book_new();
 
-processSummaryData(data:any[]){
+    XLSX.utils.book_append_sheet(
+      workbook,
+      worksheet,
+      'Analytics'
+    );
 
-  const isComviva =
-    this.currentUser === 'comviva';
+    const excelBuffer =
+      XLSX.write(workbook, {
+        bookType: 'xlsx',
+        type: 'array'
+      });
 
-  if(isComviva){
+    const blob = new Blob(
+      [excelBuffer],
+      {
+        type:
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      }
+    );
 
-    // Show actual column
-    this.columns = [
-      'type',
-      'requestsFired',
-      'received',
-      'success',
-      'failed'
-    ];
-
-    this.tableData = data.map(row=>({
-      ...row,
-      requestsFired: row.requestsFired,
-      failed: row.received - row.success
-    }));
-
-  } else {
-
-    // Duplicate received → requestFired
-    this.columns = [
-      'type',
-      'requestFired',
-      'received',
-      'success',
-      'failed'
-    ];
-
-    this.tableData = data.map(row=>({
-      type: row.type,
-      requestFired: row.received,
-      received: row.received,
-      success: row.success,
-      failed: row.received - row.success
-    }));
+    saveAs(blob, 'analytics-report.xlsx');
   }
-}
 
-getColumnName(col:string){
+  // =====================================================
+  // FORMAT VALUE
+  // =====================================================
 
-  if(col === 'requestsFired')
-    return 'Actual Request Fired';
+  formatValue(value:any){
 
-  if(col === 'requestFired')
-    return 'Request Fired';
+    return !isNaN(value)
+      ? Number(value).toFixed(2)
+      : value;
+  }
 
-  if(col === 'failed')
-  return 'Failed';
+  // =====================================================
+  // SUMMARY PROCESSING
+  // =====================================================
 
-  return col.charAt(0).toUpperCase() + col.slice(1);
-}
+  processSummaryData(data:any[]){
 
-downloadFullReport(){
+    // 🔥 FIXED COMVIVA LOGIC
+    const isComviva =
+      this.state.getUser()
+      ?.toLowerCase() === 'comviva';
 
- this.api.downloadFormatted().subscribe(blob => {
+    if(isComviva){
 
-   const file = new Blob([blob], {
-     type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-    });
+      // Show actual column
+      this.columns = [
+        'type',
+        'requestsFired',
+        'received',
+        'success',
+        'failed'
+      ];
 
-  const link = document.createElement('a');
-    link.href = window.URL.createObjectURL(file);
-    link.download = 'Formatted_Report.xlsx';
-   link.click();
+      this.tableData = data.map(row=>({
 
-   });
-}
+        ...row,
+
+        requestsFired:
+          row.requestsFired,
+
+        failed:
+          row.received - row.success
+      }));
+
+    } else {
+
+      // Duplicate received → requestFired
+      this.columns = [
+        'type',
+        'requestFired',
+        'received',
+        'success',
+        'failed'
+      ];
+
+      this.tableData = data.map(row=>({
+
+        type: row.type,
+
+        requestFired:
+          row.received,
+
+        received:
+          row.received,
+
+        success:
+          row.success,
+
+        failed:
+          row.received - row.success
+      }));
+    }
+  }
+
+  // =====================================================
+  // COLUMN NAME
+  // =====================================================
+
+  getColumnName(col:string){
+
+    if(col === 'requestsFired')
+      return 'Actual Request Fired';
+
+    if(col === 'requestFired')
+      return 'Request Fired';
+
+    if(col === 'failed')
+      return 'Failed';
+
+    return col.charAt(0).toUpperCase()
+      + col.slice(1);
+  }
+
+  // =====================================================
+  // DOWNLOAD FULL REPORT
+  // =====================================================
+
+  downloadFullReport(){
+
+  const user =
+    this.state.getUser() || '';
+
+  this.api.downloadFormatted(user)
+  .subscribe(blob => {
+
+    const file = new Blob(
+      [blob],
+      {
+        type:
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      }
+    );
+
+    const link =
+      document.createElement('a');
+
+    link.href =
+      window.URL.createObjectURL(file);
+
+    link.download =
+      'Formatted_Report.xlsx';
+
+    link.click();
+  });
+ }
 }

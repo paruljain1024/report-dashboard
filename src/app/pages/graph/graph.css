@@ -189,3 +189,24 @@
   padding: 40px;
   min-height: 100%;
 }
+
+.typewise-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(700px, 1fr));
+  gap: 30px;
+  margin-top: 30px;
+}
+
+.chart-wrapper {
+  background: white;
+  padding: 20px;
+  border-radius: 20px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+}
+
+.chart-title {
+  font-size: 24px;
+  font-weight: 700;
+  margin-bottom: 15px;
+  text-align: center;
+}

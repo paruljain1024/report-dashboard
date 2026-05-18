@@ -5,6 +5,33 @@ import { BehaviorSubject } from 'rxjs';
   providedIn: 'root'
 })
 export class AppStateService {
+
+  // 🔥 USER SESSION
+  private currentUser = new BehaviorSubject<string>(
+    sessionStorage.getItem('currentUser') || ''
+  );
+
+  currentUser$ = this.currentUser.asObservable();
+
+  setUser(name:string){
+    sessionStorage.setItem('currentUser', name);
+    this.currentUser.next(name);
+  }
+
+  getUser(){
+    return this.currentUser.value;
+  }
+
+  isUserEntered(){
+    return !!this.currentUser.value;
+  }
+
+  clearUser(){
+    sessionStorage.removeItem('currentUser');
+    this.currentUser.next('');
+  }
+
+  // 🔥 PROCESSING COMPLETED
   private static readonly PROCESSING_COMPLETED_KEY = 'processingCompleted';
 
   private processingCompleted = new BehaviorSubject<boolean>(
@@ -15,7 +42,10 @@ export class AppStateService {
 
   setCompleted(value: boolean) {
     this.processingCompleted.next(value);
-    localStorage.setItem(AppStateService.PROCESSING_COMPLETED_KEY, String(value));
+    localStorage.setItem(
+      AppStateService.PROCESSING_COMPLETED_KEY,
+      String(value)
+    );
   }
 
   getCompleted() {
@@ -23,15 +53,25 @@ export class AppStateService {
   }
 
   clearProcessingState() {
-    localStorage.removeItem(AppStateService.PROCESSING_COMPLETED_KEY);
+    localStorage.removeItem(
+      AppStateService.PROCESSING_COMPLETED_KEY
+    );
+
     this.processingCompleted.next(false);
   }
-  private hasData = new BehaviorSubject<boolean>(false);
+
+  // 🔥 HAS DATA
+  private hasData = new BehaviorSubject<boolean>(
+    localStorage.getItem('hasData') === 'true'
+  );
 
   hasData$ = this.hasData.asObservable();
 
   setHasData(value: boolean){
+
     this.hasData.next(value);
+
+    localStorage.setItem('hasData', String(value));
   }
 
   getHasData(){

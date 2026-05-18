@@ -62,10 +62,16 @@ export class ApiService {
     return this.http.get<any[]>(`${this.baseUrl}/api/filter/custom?metric=${metric}`);
   }
 
-  downloadFormatted(){
-    return this.http.get(`${this.baseUrl}/api/excel/download-formatted`, {
-      responseType: 'blob'
-    });
+  downloadFormatted(user:string){
+
+    return this.http.get(
+
+      `${this.baseUrl}/api/excel/download-formatted?user=${user}`,
+
+      {
+        responseType: 'blob'
+      }
+    );
   }
 
   getTypewiseTimeSeries() {

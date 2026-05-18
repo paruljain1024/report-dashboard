@@ -48,11 +48,17 @@
       <!-- 🔄 PROCESSING STATE -->
       <div *ngIf="processing">
 
-        <div class="progress-container">
-          <div class="progress-bar" [style.width]="progress + '%'">
-            {{ progress }}%
-          </div>
-        </div>
+        <p class="speed-text">
+          ⚡ Speed:
+          {{ speed | number:'1.1-1' }} MB/s
+        </p>
+
+        <p class="speed-text">
+          📦 Processed:
+          {{ processedGB | number:'1.1-1' }}
+          GB /
+          {{ totalGB | number:'1.1-1' }} GB
+        </p>
 
         <p *ngIf="startTime">
 
