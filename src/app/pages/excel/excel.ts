@@ -8,6 +8,10 @@ import { AppStateService } from '../../core/services/app-state.service';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
 
+import { ChangeDetectorRef, OnInit } from '@angular/core';
+
+import { Router } from '@angular/router';
+
 @Component({
   selector:'app-excel',
   standalone:true,
@@ -15,7 +19,7 @@ import { saveAs } from 'file-saver';
   templateUrl:'./excel.html',
   styleUrl:'./excel.css'
 })
-export class ExcelComponent {
+export class ExcelComponent implements OnInit {
 
   currentUser: string = '';
 
@@ -35,9 +39,16 @@ export class ExcelComponent {
   uniqueData:any[]=[];
 
   constructor(
-    private api:ApiService,
-    private state: AppStateService
-  ){}
+  private api:ApiService,
+  private state: AppStateService,
+  private cd: ChangeDetectorRef,
+  private router: Router
+){}
+
+  onAnalyticsChange(value: string){
+    this.selectedAnalytics = value;
+    this.loadAnalytics();
+  }
 
   loadAnalytics(){
 
@@ -62,6 +73,7 @@ export class ExcelComponent {
           );
 
           this.loading=false;
+          this.cd.detectChanges();
 
           return;
         }
@@ -73,6 +85,7 @@ export class ExcelComponent {
           this.processSummaryData(d);
 
           this.loading=false;
+          this.cd.detectChanges();
         });
 
       break;
@@ -97,6 +110,7 @@ export class ExcelComponent {
             this.performanceData;
 
           this.loading=false;
+          this.cd.detectChanges();
 
           return;
         }
@@ -116,6 +130,7 @@ export class ExcelComponent {
           this.tableData=d;
 
           this.loading=false;
+          this.cd.detectChanges();
         });
 
       break;
@@ -171,6 +186,7 @@ export class ExcelComponent {
           });
 
           this.loading=false;
+          this.cd.detectChanges();
         });
 
       break;
@@ -191,9 +207,12 @@ export class ExcelComponent {
             'max'
           ];
 
-          this.tableData=[d];
+          this.tableData=[
+            this.normalizeActiveSizeRow(d)
+          ];
 
           this.loading=false;
+          this.cd.detectChanges();
         });
 
       break;
@@ -216,6 +235,7 @@ export class ExcelComponent {
           this.tableData=[d];
 
           this.loading=false;
+          this.cd.detectChanges();
         });
 
       break;
@@ -236,13 +256,18 @@ export class ExcelComponent {
           ];
 
           this.tableData =
-            Object.keys(d).map(key=>({
+          Object.keys(d)
+          .filter(key =>
+          key !== '200' &&
+          key !== 'SUCCESS'
+        )
+        .map(key => ({
 
-            response:key,
-            count:d[key]
-          }));
-
+         response: key,
+         count: d[key]
+        })); 
           this.loading=false;
+          this.cd.detectChanges();
         });
 
       break;
@@ -262,10 +287,21 @@ export class ExcelComponent {
       return;
     }
 
+    let exportData = this.tableData;
+
+    if (this.selectedAnalytics === 'response') {
+
+      exportData = this.tableData.filter(
+      row =>
+      row.response !== '200' &&
+      row.response !== 'SUCCESS'
+     );
+    }
+
     const worksheet =
-      XLSX.utils.json_to_sheet(
-        this.tableData
-      );
+    XLSX.utils.json_to_sheet(
+    exportData
+    );
 
     const workbook =
       XLSX.utils.book_new();
@@ -302,6 +338,15 @@ export class ExcelComponent {
     return !isNaN(value)
       ? Number(value).toFixed(2)
       : value;
+  }
+
+  private normalizeActiveSizeRow(data: any) {
+
+    return {
+      min: Number(data?.min ?? data?.minimum ?? 0),
+      avg: Number(data?.avg ?? data?.average ?? 0),
+      max: Number(data?.max ?? data?.maximum ?? 0)
+    };
   }
 
   // =====================================================
@@ -418,4 +463,32 @@ export class ExcelComponent {
     link.click();
   });
  }
+
+ ngOnInit(): void {
+
+this.api.getTypes()
+.subscribe({
+
+  next: (data:any[]) => {
+
+    if(!data || data.length === 0){
+
+      alert(
+        'Data not available. Please process logs first.'
+      );
+
+      this.router.navigate(['/processing']);
+    }
+  },
+
+  error: () => {
+
+    alert(
+      'Backend data not available. Please process logs first.'
+    );
+
+    this.router.navigate(['/processing']);
+  }
+});
 }
+ }

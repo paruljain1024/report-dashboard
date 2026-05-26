@@ -68,6 +68,18 @@ implements OnInit, OnDestroy {
 
     const savedUser = this.state.getUser();
 
+    /* RESET STALE FRONTEND STATE */
+
+    this.hasData = false;
+
+    this.completed = false;
+
+    this.processing = false;
+
+    this.state.setHasData(false);
+
+    this.state.setCompleted(false);
+
     if(savedUser){
 
       this.currentUser = savedUser;
@@ -75,8 +87,6 @@ implements OnInit, OnDestroy {
 
       this.api.getProcessingStatus()
       .subscribe((res:any) => {
-
-        console.log("INIT STATUS:", res);
 
         if(res.startTime){
           this.startTime =
@@ -133,10 +143,14 @@ implements OnInit, OnDestroy {
         else {
 
           this.processing = false;
+
           this.completed = false;
 
-          this.hasData =
-            this.state.getHasData();
+          this.hasData = false;
+
+          this.state.setHasData(false);
+
+          this.state.setCompleted(false);
         }
 
         this.cd.detectChanges();
@@ -209,11 +223,6 @@ implements OnInit, OnDestroy {
 
           next: (startRes:any) => {
 
-            console.log(
-              "START RESPONSE:",
-              startRes
-            );
-
             if(!startRes.started){
 
               if(
@@ -239,8 +248,8 @@ implements OnInit, OnDestroy {
             this.processing = true;
             this.completed = false;
 
-            this.hasData = true;
-            this.state.setHasData(true);
+           // this.hasData = true;
+            //this.state.setHasData(true);
 
             this.startPolling();
           },
@@ -297,8 +306,6 @@ implements OnInit, OnDestroy {
 
         this.previousStatus = res.status;
 
-        console.log("STATUS:", res);
-
         if(res.startTime){
           this.startTime =
             new Date(res.startTime).toLocaleString();
@@ -325,8 +332,9 @@ implements OnInit, OnDestroy {
           this.processing = false;
           this.completed = false;
 
-          this.hasData =
-            this.state.getHasData();
+          this.hasData = false;
+
+          this.state.setHasData(false);
 
           this.state.setCompleted(false);
 
@@ -458,18 +466,54 @@ implements OnInit, OnDestroy {
   // REPROCESS
   // =========================================================
 
-  reprocessLogs(){
+  reprocessLogs(): void {
 
-    this.processing = true;
+  /* RESET OLD STATE */
 
-    this.progress = 0;
-    this.speed = 0;
+  this.completed = false;
 
-    // 🔥 NEW
-    this.processedGB = 0;
-    this.totalGB = 0;
-    this.etaSeconds = 0;
+  this.processing = false;
+
+  this.progress = 0;
+
+  this.hasData = false;
+  
+  this.startTime = '';
+
+  this.endTime = '';
+
+  this.speed = 0;
+
+  this.processedGB = 0;
+
+  this.totalGB = 0;
+
+  this.etaSeconds = 0;
+
+  this.showError = false;
+
+  this.errorMessage = '';
+
+  this.showSuccess = false;
+
+  this.successMessage = '';
+
+  this.hasData = false;
+
+  this.state.setHasData(false);
+
+  this.state.setCompleted(false);
+
+  /* FORCE UI UPDATE */
+
+  this.cd.detectChanges();
+
+  /* START AGAIN */
+
+  setTimeout(() => {
 
     this.startProcessing();
-  }
+
+  }, 100);
+}
 }

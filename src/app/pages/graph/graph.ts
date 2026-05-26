@@ -1,12 +1,23 @@
-import { Component } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  ChangeDetectorRef,
+  Component,
+  OnInit
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../core/services/api.service';
+
 import * as echarts from 'echarts';
+
 import { saveAs } from 'file-saver';
-import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import JSZip from 'jszip';
+
+import jsPDF from 'jspdf';
+
+import { Router } from '@angular/router';
+
 
 import {
   Document,
@@ -20,13 +31,12 @@ import {
   standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './graph.html',
-  styleUrl: './graph.css'
+  styleUrl: './graph.css',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class GraphComponent {
 
-  /* ===============================
-        ALL METRICS LIST
-  ===============================*/
+export class GraphComponent implements OnInit {
+
   allMetrics = [
     'request-in',
     'request-out',
@@ -35,105 +45,122 @@ export class GraphComponent {
     'val',
     'ppt',
     'top',
-    'efficiency',
+    'efficiency'
   ];
 
-  downloadType = '';
+  dynamicCharts: any[] = [];
+
   metric = '';
   date = '';
   fromTime = '';
   toTime = '';
   interval = 1;
 
+
+  isDownloading = false;
+  downloadType = '';
+
   loading = false;
+
   charts: { [key: string]: any } = {};
+
   typewiseKeys: string[] = [];
+  pendingRequests = 0;
 
-  constructor(private api: ApiService) {}
+  constructor(
+    private api: ApiService,
+    private cdr: ChangeDetectorRef,
+    private router: Router
+  ) {}
 
-  /* ===============================
-        FORMAT TIME
-  ===============================*/
+  trackByValue(_: number, value: string) {
+    return value;
+  }
+
+  trackByChartId(_: number, chart: { id: string }) {
+    return chart.id;
+  }
+
   formatTime(t: string) {
+
     if (!t) return '';
+
     return t.length === 5 ? t + ':00' : t;
   }
 
-  /* ===============================
-        MAIN BUTTON CLICK
-  ===============================*/
   loadCustomGraph() {
-
 
     this.clearAllCharts();
 
-    // ===== TYPEWISE TIMESERIES =====
-  // ===== TYPEWISE TIMESERIES =====
-if (this.metric === 'typewise-timeseries') {
+    /* ================= TYPEWISE ================= */
 
-  this.clearAllCharts();
+    if (this.metric === 'typewise-timeseries') {
 
-  let request$;
+      let request$;
 
-  // ✅ SAME LOGIC AS OTHER METRICS
-  if (this.date) {
+      if (this.date) {
 
-    request$ = this.api.getCustomGraph(
-      this.metric,
-      this.date,
-      this.formatTime(this.fromTime),
-      this.formatTime(this.toTime),
-      this.interval
-    );
+        request$ = this.api.getCustomGraph(
+          this.metric,
+          this.date,
+          this.formatTime(this.fromTime),
+          this.formatTime(this.toTime),
+          this.interval
+        );
 
-  } else {
+      } else {
 
-    request$ = this.api.getTypewiseTimeSeries();
-  }
+        request$ = this.api.getTypewiseTimeSeries();
+      }
 
-  request$.subscribe((data:any) => {
-    this.renderTypewiseCharts(data);
-  });
-  return;
-}
+      request$.subscribe((data: any) => {
+
+        this.renderTypewiseCharts(data);
+        this.loading = false;
+        this.cdr.detectChanges();
+
+      });
+
+      return;
+    }
 
     if (!this.metric) {
+
       alert('Select metric');
       return;
     }
 
     this.loading = true;
 
-    /* ===== ALL DASHBOARD ===== */
+    /* ================= ALL ================= */
+
     if (this.metric === 'all') {
+
       this.loadAllGraphs();
       return;
     }
 
-    /* ===== SINGLE GRAPH ===== */
+    /* ================= SINGLE ================= */
+
     this.loadSingleMetric(this.metric);
   }
 
-  /* ===============================
-        LOAD ALL METRICS
-  ===============================*/
   loadAllGraphs() {
 
+    this.pendingRequests = this.allMetrics.length;
+
     this.allMetrics.forEach(metric => {
+
       this.loadSingleMetric(metric);
     });
-
-    this.loading = false;
   }
 
-  /* ===============================
-        LOAD SINGLE METRIC
-  ===============================*/
   loadSingleMetric(metricName: string) {
 
     let request$;
 
     if (this.date) {
+
       request$ = this.api.getCustomGraph(
         metricName,
         this.date,
@@ -141,7 +168,9 @@ if (this.metric === 'typewise-timeseries') {
         this.formatTime(this.toTime),
         this.interval
       );
+
     } else {
+
       request$ = this.api.getMetricGraph(metricName);
     }
 
@@ -152,50 +181,421 @@ if (this.metric === 'typewise-timeseries') {
           ? 'chart-' + metricName
           : 'chart';
 
-      const chartDom =
-        document.getElementById(chartId);
+      this.cdr.detectChanges();
 
-      if (!chartDom) return;
+      requestAnimationFrame(() => {
 
-      if(this.charts[metricName]){
-        this.charts[metricName].dispose();
+        const chartDom =
+          document.getElementById(chartId);
+
+        if (!chartDom) {
+          this.finishRequest();
+          return;
+        }
+
+        if (this.charts[metricName]) {
+          this.charts[metricName].dispose();
+        }
+
+        this.charts[metricName] =
+          echarts.init(chartDom, undefined, {
+            useDirtyRect: true
+          });
+
+        const chart =
+          this.charts[metricName];
+
+        /* ================= EFFICIENCY ================= */
+
+        if (metricName === 'efficiency') {
+
+          const times = Array.from(
+            new Set([
+              ...Object.keys(data.success || {}),
+              ...Object.keys(data.failure || {})
+            ])
+          ).sort();
+
+          chart.setOption({
+
+            animation: false,
+
+            title: {
+              text: 'Efficiency Analysis',
+              left: 'center'
+            },
+
+            tooltip: {
+              trigger: 'axis'
+            },
+
+            legend: {
+              top: 30,
+              data: ['Success', 'Failure']
+            },
+
+            xAxis: {
+              type: 'category',
+              data: times,
+              name: 'Time',
+              nameLocation: 'middle',
+              nameGap: 35
+            },
+
+            yAxis: {
+              type: 'value',
+              name: 'Requests'
+            },
+
+            dataZoom: [
+              { type: 'inside' },
+              { type: 'slider' }
+            ],
+
+            series: [
+              this.createLineSeries(
+                'Success',
+                times.map(t => data.success[t] || 0),
+                '#f790b0'
+              ),
+              this.createLineSeries(
+                'Failure',
+                times.map(t => data.failure[t] || 0),
+                '#dc2626'
+              )
+            ]
+          });
+
+          chart.resize();
+          this.finishRequest();
+
+          return;
+        }
+
+        /* ================= MIN AVG MAX ================= */
+
+        if (['val', 'ppt', 'rtt', 'top'].includes(metricName)) {
+
+          const times = Object.keys(data);
+
+          chart.setOption({
+
+            animation: false,
+
+            title: {
+              text: metricName.toUpperCase() + ' Analysis',
+              left: 'center'
+            },
+
+            tooltip: {
+              trigger: 'axis'
+            },
+
+            legend: {
+              top: 30,
+              data: ['Min', 'Avg', 'Max']
+            },
+
+            xAxis: {
+              type: 'category',
+              data: times,
+              name: 'Time',
+              nameLocation: 'middle',
+              nameGap: 35
+            },
+
+            yAxis: {
+              type: 'value',
+              name: 'Processing Time'
+            },
+
+            dataZoom: [
+              { type: 'inside' },
+              { type: 'slider' }
+            ],
+
+            series: [
+              this.createLineSeries(
+                'Min',
+                times.map(t => data[t].min),
+                '#f5d487'
+              ),
+              this.createLineSeries(
+                'Avg',
+                times.map(t => data[t].avg),
+                '#80caed'
+              ),
+              this.createLineSeries(
+                'Max',
+                times.map(t => data[t].max),
+                '#ee89bd'
+              )
+            ]
+          });
+
+          chart.resize();
+          this.finishRequest();
+
+          return;
+        }
+
+        if (
+          metricName === 'active-size' &&
+          this.hasMinAvgMaxShape(data)
+        ) {
+
+          const normalized =
+            this.normalizeMinAvgMaxSeries(data);
+
+          chart.setOption({
+
+            animation: false,
+
+            title: {
+              text: 'ACTIVE SIZE Analysis',
+              left: 'center'
+            },
+
+            tooltip: {
+              trigger: 'axis'
+            },
+
+            legend: {
+              top: 30,
+              data: ['Min', 'Avg', 'Max']
+            },
+
+            xAxis: {
+              type: 'category',
+              data: normalized.times,
+              name: 'Time',
+              nameLocation: 'middle',
+              nameGap: 35
+            },
+
+            yAxis: {
+              type: 'value',
+              name: 'Size'
+            },
+
+            dataZoom: [
+              { type: 'inside' },
+              { type: 'slider' }
+            ],
+
+            series: [
+              this.createLineSeries(
+                'Min',
+                normalized.min,
+                '#f5d487'
+              ),
+              this.createLineSeries(
+                'Avg',
+                normalized.avg,
+                '#80caed'
+              ),
+              this.createLineSeries(
+                'Max',
+                normalized.max,
+                '#ee89bd'
+              )
+            ]
+          });
+
+          chart.resize();
+          this.finishRequest();
+
+          return;
+        }
+
+        /* ================= NORMAL ================= */
+
+let times: string[] = [];
+let values: number[] = [];
+
+/* ===== ARRAY FORMAT ===== */
+
+if (Array.isArray(data)) {
+  times = data.map((d: any) => {
+
+    const datePart = d.date || '';
+    const timePart = d.time || '';
+
+    return `${datePart} ${timePart}`.trim();
+  });
+
+  values = data.map((d: any) => {
+    return this.extractMetricValue(d, metricName);
+  });
+}
+
+/* ===== OBJECT FORMAT ===== */
+
+else {
+
+  const rawTimes = Object.keys(data);
+
+  times = rawTimes.map((t: string) => {
+
+    const timestamp = Number(t);
+
+    if (!isNaN(timestamp)) {
+
+      const dateObj = new Date(timestamp * 1000);
+
+      return dateObj.toLocaleDateString([], {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+      }) + ' ' +
+
+      dateObj.toLocaleTimeString([], {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+      });
+    }
+
+    return t;
+  });
+
+  values = rawTimes.map(
+    (t: string) => Number(data[t]) || 0
+  );
+}
+
+chart.setOption({
+
+  animation: false,
+
+  title: {
+    text:
+      metricName === 'request-out'
+        ? 'REQUEST OUT & TPS Analysis'
+        : metricName.toUpperCase() + ' Analysis',
+
+    left: 'center'
+  },
+
+  tooltip: {
+    trigger: 'axis'
+  },
+
+  xAxis: {
+    type: 'category',
+    data: times,
+    name: 'Time',
+    nameLocation: 'middle',
+    nameGap: 35
+  },
+
+  yAxis: {
+    type: 'value',
+    name:
+      metricName === 'active-size'
+        ? 'Size'
+        : 'Requests'
+  },
+
+  dataZoom: [
+    { type: 'inside' },
+    { type: 'slider' }
+  ],
+
+  series: [
+    this.createLineSeries(
+      metricName.toUpperCase(),
+      values,
+      '#f790b0'
+    )
+  ]
+});
+
+chart.resize();
+this.finishRequest();
+
+      });
+
+      if (this.metric !== 'all') {
+        this.loading = false;
       }
+    });
+  }
 
-      this.charts[metricName] = echarts.init(chartDom);
-      const chart = this.charts[metricName];
+  /* ================= TYPEWISE ================= */
 
-      /* =====================================================
-            EFFICIENCY GRAPH
-      =====================================================*/
-      if (metricName === 'efficiency') {
+  renderTypewiseCharts(data: any) {
 
-        const times = Array.from(
-        new Set([
-           ...Object.keys(data.success || {}),
-           ...Object.keys(data.failure || {})
-           ])
-         ).sort();
+    this.typewiseKeys =
+      Object.keys(data.requestIn);
 
-        chart.setOption({
+    const requestIn = data.requestIn;
+    const requestOut = data.requestOut;
+
+    this.dynamicCharts = [];
+
+    Object.keys(requestIn).forEach(type => {
+
+      const chartId =
+        'dynamic-chart-' + type;
+
+      const rawTimes =
+        Object.keys(requestIn[type] || {});
+
+        const times = rawTimes.map((t: string) => {
+
+        const timestamp = Number(t);
+
+        if (!isNaN(timestamp)) {
+
+          const dateObj = new Date(timestamp * 1000);
+
+          return dateObj.toLocaleDateString([], {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit'
+          }) + ' ' +
+
+          dateObj.toLocaleTimeString([], {
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit'
+          });
+        }
+  
+        return t;
+      });
+
+      this.dynamicCharts.push({
+
+        type: type,
+
+        id: chartId,
+
+        option: {
+
+          animation: false,
 
           title: {
-            text: 'Efficiency Analysis',
+            text: type + ' Analysis',
             left: 'center'
           },
 
-          tooltip: { trigger: 'axis' },
+          tooltip: {
+            trigger: 'axis'
+          },
 
           legend: {
             top: 30,
-            data: ['Success', 'Failure']
+            data: ['Request In', 'Request Out']
           },
 
           xAxis: {
             type: 'category',
+            data: times,
             name: 'Time',
             nameLocation: 'middle',
-            nameGap: 35,
-            data: times
+            nameGap: 35
           },
 
           yAxis: {
@@ -209,510 +609,568 @@ if (this.metric === 'typewise-timeseries') {
           ],
 
           series: [
-            {
-              name: 'Success',
-              type: 'line',
-              smooth: true,
-              showSymbol: false,
-              data: times.map(t => data.success[t]||0),
-              lineStyle: { color: '#f790b0', width: 2 }
-            },
-            {
-              name: 'Failure',
-              type: 'line',
-              smooth: true,
-              showSymbol: false,
-              data: times.map(t => data.failure[t]||0),
-              lineStyle: { color: '#db1111', width: 2 }
-            }
+            this.createLineSeries(
+              'Request In',
+              rawTimes.map(
+                t => requestIn[type][t] || 0
+              ),
+              '#a4e6f5'
+            ),
+            this.createLineSeries(
+              'Request Out',
+              rawTimes.map(
+                 t => requestOut[type]?.[t] || 0
+              ),
+              '#f092b9'
+            )
           ]
-        });
-
-        return;
-      }
-
-      /* =====================================================
-            MIN / AVG / MAX METRICS
-      =====================================================*/
-      if (['val', 'ppt', 'rtt', 'top']
-        .includes(metricName)) {
-
-        const times = Object.keys(data);
-
-        chart.setOption({
-
-          title: {
-            text: metricName.toUpperCase() + ' Analysis',
-            left: 'center'
-          },
-
-          tooltip: { trigger: 'axis' },
-
-          legend: {
-            top: 30,
-            data: ['Min', 'Avg', 'Max']
-          },
-
-          xAxis: {
-            type: 'category',
-            name: 'Time',
-            nameLocation: 'middle',
-            nameGap: 35,
-            data: times
-          },
-
-          yAxis: {
-            type: 'value',
-            name: 'Processing Time (ms)'
-          },
-
-          dataZoom: [
-            { type: 'inside' },
-            { type: 'slider' }
-          ],
-
-          series: [
-            {
-              name: 'Min',
-              type: 'line',
-              smooth: true,
-              showSymbol: false,
-              data: times.map(t => data[t].min),
-              lineStyle: { color: '#f5d487' }
-            },
-            {
-              name: 'Avg',
-              type: 'line',
-              smooth: true,
-              showSymbol: false,
-              data: times.map(t => data[t].avg),
-              lineStyle: { color: '#80caed' }
-            },
-            {
-              name: 'Max',
-              type: 'line',
-              smooth: true,
-              showSymbol: false,
-              data: times.map(t => data[t].max),
-              lineStyle: { color: '#ee89bd' }
-            }
-          ]
-        });
-
-        return;
-      }
-
-      /* =====================================================
-            NORMAL METRICS
-      =====================================================*/
-      const times = Object.keys(data);
-
-      chart.setOption({
-
-        title: {
-           text: metricName === 'request-out'
-           ? 'REQUEST OUT & TPS Analysis'
-          : metricName.toUpperCase() + ' Analysis',
-          left: 'center'
-        },
-
-        tooltip: { trigger: 'axis' },
-
-        xAxis: {
-          type: 'category',
-          name: 'Time',
-          nameLocation: 'middle',
-          nameGap: 35,
-          data: times
-        },
-
-        yAxis: {
-          type: 'value',
-          name: 'Requests Per Second'
-        },
-
-        dataZoom: [
-          { type: 'inside' },
-          { type: 'slider' }
-        ],
-
-        series: [
-          {
-            type: 'line',
-            smooth: true,
-            showSymbol: false,
-            data: times.map(t => data[t]),
-            lineStyle: { color: '#6ecdf0' }
-          }
-        ]
+        }
       });
+    });
 
-      this.loading = false;
+    this.cdr.detectChanges();
+
+    requestAnimationFrame(() => {
+
+      setTimeout(() => {
+
+        this.dynamicCharts.forEach(chart => {
+
+          const chartDom =
+            document.getElementById(chart.id);
+
+          if (!chartDom) return;
+
+          chartDom.style.width = '100%';
+          chartDom.style.height = '400px';
+
+          const myChart =
+            echarts.init(chartDom, undefined, {
+              useDirtyRect: true
+            });
+
+          myChart.setOption(chart.option);
+
+          myChart.resize();
+
+          this.charts[chart.id] = myChart;
+
+        });
+
+      }, 100);
+
     });
   }
-  
+
+  /* ================= DOWNLOAD ================= */
+
   async downloadGraph() {
 
-  if(!this.downloadType){
-    alert("Select download format");
-    return;
-  }
+    this.isDownloading = true;
 
-  /* ===============================
-        COLLECT ALL CHARTS
-  ===============================*/
+try{
 
-  const charts:HTMLElement[] = [];
+    if (!this.downloadType) {
 
-if(this.metric !== 'all' && this.metric !== 'typewise-timeseries'){
-    this.allMetrics.forEach(m=>{
-    const el = document.getElementById('chart-'+m);
-    if(el) charts.push(el);
-  });
+      alert('Select download format');
 
-}
-else if(this.metric === 'typewise-timeseries'){
+      return;
+    }
 
-  // ⭐ FIX: collect all typewise charts
-  Object.keys(this.charts).forEach(type=>{
-    const el = document.getElementById('chart-'+type);
-    if(el) charts.push(el);
-  });
+    const charts: HTMLElement[] = [];
 
-}
-else{
+    /* ---------- ALL ---------- */
 
-  const el = document.getElementById('chart');
-  if(el) charts.push(el);
-}
-  if(charts.length===0){
-    alert("Generate graph first");
-    return;
-  }
+    if (this.metric === 'all') {
 
-  /* ===============================
-        CAPTURE IMAGES
-  ===============================*/
+      this.allMetrics.forEach(m => {
 
-  const images:string[]=[];
+        const el =
+          document.getElementById('chart-' + m);
 
-  for(const el of charts){
-
-    const canvas =
-      await html2canvas(el,{
-        scale:2
+        if (el) charts.push(el as HTMLElement);
       });
+    }
 
-    images.push(
-      canvas.toDataURL('image/png')
+    /* ---------- TYPEWISE ---------- */
+
+    else if (this.metric === 'typewise-timeseries') {
+
+      this.dynamicCharts.forEach(chart => {
+
+        const el =
+          document.getElementById(chart.id);
+
+        if (el) charts.push(el as HTMLElement);
+      });
+    }
+
+    /* ---------- SINGLE ---------- */
+
+    else {
+
+      const el =
+        document.getElementById('chart');
+
+      if (el) charts.push(el as HTMLElement);
+    }
+
+    if (charts.length === 0) {
+
+      alert('Generate graph first');
+
+      return;
+    }
+
+    /* ---------- PNG ---------- */
+
+    if (this.downloadType === 'png') {
+
+      if (
+        this.metric !== 'all' &&
+        this.metric !== 'typewise-timeseries'
+      ) {
+
+        const canvas =
+          await html2canvas(charts[0]);
+
+        canvas.toBlob(blob => {
+
+          if (blob) {
+            saveAs(blob, 'Graph.png');
+          }
+
+        });
+        return;
+      }
+
+      const zip = new JSZip();
+
+      for (let i = 0; i < charts.length; i++) {
+
+        const canvas =
+          await html2canvas(charts[i], {
+            scale: 2
+          });
+
+        const blob =
+          await new Promise<Blob | null>(
+            resolve => canvas.toBlob(resolve)
+          );
+
+        if (blob) {
+
+          let name = '';
+
+          if (
+            this.metric ===
+            'typewise-timeseries'
+          ) {
+
+            name = this.typewiseKeys[i];
+
+          } else {
+
+            name = this.allMetrics[i];
+          }
+
+          zip.file(`${name}.png`, blob);
+        }
+      }
+
+      const zipBlob =
+        await zip.generateAsync({
+          type: 'blob'
+        });
+
+      saveAs(zipBlob, 'Analytics_Graphs.zip');
+    }
+
+    /* ---------- PDF ---------- */
+
+if (this.downloadType === 'pdf') {
+
+  const pdf = new jsPDF('p', 'mm', 'a4');
+
+  for (let i = 0; i < charts.length; i++) {
+
+    const canvas = await html2canvas(charts[i], {
+      scale: 2
+    });
+
+    const imgData = canvas.toDataURL('image/png');
+
+    const imgWidth = 190;
+
+    const imgHeight =
+      canvas.height * imgWidth / canvas.width;
+
+    if (i > 0) {
+      pdf.addPage();
+    }
+
+    pdf.addImage(
+      imgData,
+      'PNG',
+      10,
+      10,
+      imgWidth,
+      imgHeight
     );
   }
-  /* ================= PNG DOWNLOAD ================= */
 
-if(this.downloadType === 'png'){
-
-  /* ---------- SINGLE GRAPH ---------- */
-
-  if(this.metric !== 'all' && this.metric !== 'typewise-timeseries'){
-
-    const canvas =
-      await html2canvas(charts[0]);
-
-    canvas.toBlob(blob=>{
-      if(blob)
-        saveAs(blob,'Graph.png');
-    });
-
-    return;
-  }
-
-  /* ---------- ALL → ZIP ---------- */
-
-  const zip = new JSZip();
-
-  for(let i=0;i<charts.length;i++){
-
-    const canvas =
-      await html2canvas(charts[i],{
-        scale:2
-      });
-
-    const blob =
-      await new Promise<Blob|null>(
-        resolve=>canvas.toBlob(resolve)
-      );
-
-    if(blob){
-      let name = '';
-
-    if(this.metric === 'typewise-timeseries'){
-      name = this.typewiseKeys[i];   // ✅ TYPEWISE NAME
-      }else{
-      name = this.allMetrics[i];     // ✅ ALL NAME
-    }
-
-    zip.file(`${name}.png`, blob);
-    }
-  }
-
-  const zipBlob =
-    await zip.generateAsync({
-      type:'blob'
-    });
-
-  saveAs(
-    zipBlob,
-    'Analytics_Graphs.zip'
-  );
-
+  pdf.save('Analytics_Graphs.pdf');
   return;
 }
 
-  /* ====================================================
-                ✅ PDF EXPORT
-     2 GRAPHS PER PAGE
-  ====================================================*/
+/* ---------- DOCX ---------- */
 
-  if(this.downloadType==='pdf'){
+if (this.downloadType === 'docx') {
 
-    const pdf =
-      new jsPDF('landscape');
+  const children: any[] = [];
 
-    let y = 10;
+  for (const el of charts) {
 
-    images.forEach((img,i)=>{
+    const canvas = await html2canvas(el, {
+      scale: 2
+    });
 
-      pdf.addImage(
-        img,
-        'PNG',
-        10,
-        y,
-        270,
-        80
-      );
+    const blob = await new Promise<Blob | null>(
+      resolve => canvas.toBlob(resolve)
+    );
 
-      y += 90;
+    if (!blob) continue;
 
-      /* new page after 2 graphs */
-      if((i+1)%2===0 && i!==images.length-1){
-        pdf.addPage();
-        y = 10;
+    const buffer = await blob.arrayBuffer();
+
+    children.push(
+
+      new Paragraph({
+
+        children: [
+
+          new ImageRun({
+
+            data: buffer,
+
+            type: 'png',
+  
+            transformation: {
+              width: 600,
+              height: 350
+            }
+
+          })
+
+        ]
+
+      })
+
+    );
+  }
+
+  const doc = new Document({
+
+    sections: [
+
+      {
+        properties: {},
+        children
+      }
+
+    ]
+
+  });
+
+  const blob = await Packer.toBlob(doc);
+
+  saveAs(blob, 'Analytics_Graphs.docx');
+  return;
+}
+
+
+    
+  }
+  
+  catch(error) {
+
+    console.error(error);
+
+    alert('Download failed');
+  }
+
+
+   finally {
+
+    this.isDownloading = false;
+    this.cdr.detectChanges();
+
+  }
+  }
+
+
+  
+  /* ================= CLEAR ================= */
+  clearAllCharts() {
+
+    Object.keys(this.charts).forEach(key => {
+
+      if (this.charts[key]) {
+
+        this.charts[key].dispose();
       }
     });
 
-    pdf.save("Analytics_Report.pdf");
-    return;
+    this.dynamicCharts = [];
+
+    this.charts = {};
+
+    const mainChart =
+      document.getElementById('chart');
+
+    if (mainChart) {
+
+      mainChart.innerHTML = '';
+    }
+
+    this.allMetrics.forEach(m => {
+
+      const el =
+        document.getElementById('chart-' + m);
+
+      if (el) {
+
+        el.innerHTML = '';
+      }
+    });
+    
   }
 
-  /* ====================================================
-                ✅ DOCX EXPORT
-     2 GRAPHS PER PAGE
-  ====================================================*/
+  clearForm() {
 
-  if(this.downloadType==='docx'){
+    this.metric = '';
+    this.date = '';
+    this.fromTime = '';
+    this.toTime = '';
+    this.interval = 1;
+    this.downloadType = '';
 
-    const children:any[]=[];
+    this.loading = false;
+    this.pendingRequests = 0;
 
-    children.push(
-      new Paragraph({
-        text:"Comviva Log Analytics Report",
-        heading:"Heading1"
-      })
-    );
+    this.clearAllCharts();
+  }
 
-    for(const img of images){
+  private finishRequest() {
 
-      const res =
-        await fetch(img);
+    if (this.metric !== 'all') {
+      this.loading = false;
+      return;
+    }
 
-      const buffer =
-        await res.arrayBuffer();
+    this.pendingRequests =
+      Math.max(0, this.pendingRequests - 1);
 
-      children.push(
-        new Paragraph(" ")
+    this.loading = this.pendingRequests > 0;
+  }
+
+  private hasMinAvgMaxShape(data: any): boolean {
+
+    if (Array.isArray(data)) {
+      return data.some(row =>
+        this.isMinAvgMaxRecord(row)
       );
+    }
 
-      children.push(
-        new Paragraph({
-          children:[
-            new ImageRun({
-              data:buffer,
-              type:"png",
-              transformation:{
-                width:600,
-                height:300
-              }
-            })
-          ]
-        })
+    if (data && typeof data === 'object') {
+      return Object.values(data).some(row =>
+        this.isMinAvgMaxRecord(row)
       );
     }
 
-    const doc =
-      new Document({
-        sections:[
-          { children }
-        ]
-      });
-
-    const blob =
-      await Packer.toBlob(doc);
-
-    saveAs(blob,
-      "Analytics_Report.docx");
-  }
-}
-clearAllCharts(){
-
-  Object.keys(this.charts).forEach(key=>{
-    if(this.charts[key]){
-      this.charts[key].dispose();
-    }
-    const container = document.getElementById('chartsContainer');
-    if (container) container.innerHTML = '';
-  });
-
-  this.charts = {};
-
-  const mainChart =
-    document.getElementById('chart');
-
-  if(mainChart){
-    mainChart.innerHTML = '';
+    return false;
   }
 
-  this.allMetrics.forEach(m=>{
-    const el =
-      document.getElementById('chart-'+m);
-    if(el){
-      el.innerHTML='';
-    }
-  });
-}
-clearForm(){
+  private isMinAvgMaxRecord(row: any): boolean {
+    return !!row &&
+      typeof row === 'object' &&
+      ['min', 'avg', 'max', 'minimum', 'average', 'maximum']
+        .some(key => row[key] !== undefined && row[key] !== null);
+  }
 
-  this.metric = '';
-  this.date = '';
-  this.fromTime = '';
-  this.toTime = '';
-  this.interval = 1;
-  this.downloadType = '';
+  private normalizeMinAvgMaxSeries(data: any) {
 
-  this.loading = false;
+    const rows = Array.isArray(data)
+      ? data
+      : Object.entries(data ?? {}).map(([time, value]) => ({
+          time,
+          ...(value as object)
+        }));
 
-  this.clearAllCharts();   // remove generated graphs
-}
-
-
-renderTypewiseCharts(data: any) {
-
-
-  this.typewiseKeys = Object.keys(data.requestIn);
-
-  const container = document.getElementById('chartsContainer');
-  if(!container)return;
-
-  container.innerHTML = '';
-
-  const requestIn = data.requestIn;
-  const requestOut = data.requestOut;
-
-  Object.keys(requestIn).forEach(type => {
-
-    const chartId = 'chart-' + type;
-
-    // create div dynamically
-    let chartDom = document.getElementById(chartId);
-
-    if (!chartDom) {
-      //const container = document.getElementById('chartsContainer');
-
-      const outer = document.createElement('div');
-      outer.className = 'chart-wrapper';
-
-
-      const wrapper = document.createElement('div');
-      wrapper.className = 'chart-box';   // ⭐ CHANGE ONLY THIS
-
-      const div = document.createElement('div');
-      div.id = chartId;
-     // div.className = 'typewise-chart';      // ⭐ ADD THIS
-      div.style.height = '470px';
-
-      wrapper.appendChild(div);
-      outer.appendChild(wrapper);
-      container?.appendChild(outer);
-
-      chartDom = div;
-    }
-
-    if (this.charts[type]) {
-      this.charts[type].dispose();
-    }
-
-    setTimeout(() => {
-
-  this.charts[type] = echarts.init(chartDom!);
-
-  const chart = this.charts[type];
-
-  const times = Object.keys(requestIn[type])
-  //.map(t => t.substring(0,8))
-  .sort();
-
-  
-  chart.setOption({
-    title: {
-      text: type + ' Analysis',
-      left: 'center'
-    },
-    tooltip: { trigger: 'axis' },
-    legend: {
-      top: 30,
-      data: ['Request In', 'Request Out']
-    },
-    xAxis: {
-      type: 'category',
-      name: 'Time',
-      nameLocation: 'middle',
-      nameGap: 35,
-      data: times
-    },
-    yAxis: {
-      type: 'value',
-      name: 'Requests'
-    },
-    dataZoom: [
-      { type: 'inside' },
-      { type: 'slider' }
-    ],
-    series: [
-      {
-        name: 'Request In',
-        type: 'line',
-        smooth: true,
-        showSymbol: false,
-        data: times.map(t => requestIn[type][t] || 0),
-        lineStyle: {
-          color: '#fb98c1',
-          width: 3,
-        }
+    return rows.reduce(
+      (acc, row: any) => {
+        acc.times.push(this.formatChartTime(row));
+        acc.min.push(Number(row.min ?? row.minimum ?? 0));
+        acc.avg.push(Number(row.avg ?? row.average ?? 0));
+        acc.max.push(Number(row.max ?? row.maximum ?? 0));
+        return acc;
       },
       {
-        name: 'Request Out',
-        type: 'line',
-        smooth: true,
-        showSymbol: false,
-        data: times.map(t => requestOut[type]?.[t] || 0),
-        lineStyle: {
-          color: '#88d3fc',
-          width: 3
-        }
+        times: [] as string[],
+        min: [] as number[],
+        avg: [] as number[],
+        max: [] as number[]
       }
-    ]
-  });
+    );
+  }
 
-}, 200);
+  private formatChartTime(row: any): string {
+
+    if (row?.date || row?.time) {
+      return `${row?.date ?? ''} ${row?.time ?? ''}`.trim();
+    }
+
+    if (row?.timestamp !== undefined && row?.timestamp !== null) {
+      return this.formatTimestampLabel(String(row.timestamp));
+    }
+
+    if (row?.time !== undefined && row?.time !== null) {
+      return this.formatTimestampLabel(String(row.time));
+    }
+
+    return this.formatTimestampLabel(String(row ?? ''));
+  }
+
+  private formatTimestampLabel(rawValue: string): string {
+
+    const timestamp = Number(rawValue);
+
+    if (!Number.isNaN(timestamp)) {
+
+      const dateObj = new Date(timestamp * 1000);
+
+      return dateObj.toLocaleDateString([], {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+      }) + ' ' +
+      dateObj.toLocaleTimeString([], {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+      });
+    }
+
+    return rawValue;
+  }
+
+  private createLineSeries(
+    name: string,
+    values: number[],
+    color: string
+  ) {
+    return {
+      name,
+      type: 'line',
+      smooth: false,
+      showSymbol: false,
+      symbol: 'circle',
+      sampling: 'lttb',
+      progressive: 500,
+      progressiveThreshold: 3000,
+      data: values,
+      areaStyle: {
+        opacity: 0.15,
+        color: '#d1d5db',
+      },
+      lineStyle: {
+        width: 2,
+        color
+      },
+      itemStyle: {
+        color
+      }
+    };
+  }
+
+  private extractMetricValue(
+    row: any,
+    metricName: string
+  ): number {
+
+    const candidates =
+      metricName === 'active-size'
+        ? [
+            'avg',
+            'average',
+            'value',
+            'activeSize',
+            'active_size',
+            'size',
+            'max',
+            'maximum',
+            'min',
+            'minimum'
+          ]
+        : ['value', metricName, 'count', 'size'];
+
+    for (const key of candidates) {
+
+      if (row?.[key] === undefined || row?.[key] === null) {
+        continue;
+      }
+
+      const value = Number(row[key]);
+
+      if (!Number.isNaN(value)) {
+        return value;
+      }
+    }
+
+    for (const [key, rawValue] of Object.entries(row ?? {})) {
+
+      if (['date', 'time'].includes(key)) {
+        continue;
+      }
+
+      const value = Number(rawValue);
+
+      if (!Number.isNaN(value)) {
+        return value;
+      }
+    }
+
+    return 0;
+  }
+
+  ngOnInit() {
+
+  this.api.getMetricGraph('request-in')
+  .subscribe({
+
+    next: (data:any) => {
+
+      if (
+        !data ||
+        Object.keys(data).length === 0
+      ) {
+
+        alert(
+          'Data not available. Please process logs first.'
+        );
+
+        this.router.navigate(['/processing']);
+      }
+    },
+
+    error: () => {
+
+      alert(
+        'Backend data not available. Please process logs first.'
+      );
+
+      this.router.navigate(['/processing']);
+    }
 
   });
 }

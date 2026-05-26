@@ -72,9 +72,13 @@
 Generate Graph
 </button>
 
-<button class="secondary-btn"
-(click)="downloadGraph()">
-Download
+<button
+class="secondary-btn"
+(click)="downloadGraph()"
+[disabled]="isDownloading">
+
+{{ isDownloading ? 'Downloading...' : 'Download' }}
+
 </button>
 
 <button class="clear-btn"
@@ -93,7 +97,7 @@ Download
 <!-- ALL MODE -->
 <div *ngIf="metric === 'all'" class="all-grid">
 
-  <div *ngFor="let m of allMetrics"
+  <div *ngFor="let m of allMetrics; trackBy: trackByValue"
        class="chart-wrapper">
 
 
@@ -106,6 +110,21 @@ Download
 </div>
 
 <!-- TYPEWISE GRAPH -->
-<div *ngIf="metric === 'typewise-timeseries'" class="typewise-container">
-<div id="chartsContainer"></div>
+
+<div
+  *ngIf="metric === 'typewise-timeseries'"
+  class="dynamic-grid">
+
+  <div
+    *ngFor="let chart of dynamicCharts; trackBy: trackByChartId"
+    class="dynamic-chart-card">
+
+    <div
+      [id]="chart.id"
+      class="dynamic-chart">
+    </div>
+
+  </div>
+
+</div>
 </div>

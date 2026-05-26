@@ -6,7 +6,7 @@
 
 /* FIXED SIDEBAR SPACE */
 app-sidebar {
-  width: 260px;
+  width: 300px;
   flex-shrink: 0;
 }
 

@@ -13,7 +13,7 @@
 
 <select
 [(ngModel)]="selectedAnalytics"
-(change)="loadAnalytics()">
+(ngModelChange)="loadAnalytics()">
 
 <option value="">Select Analytics</option>
 <option value="summary">Request Summary</option>

@@ -69,3 +69,25 @@ body {
   position: relative;
   z-index: 1;
 }
+
+/* WIDTH */
+::-webkit-scrollbar {
+  width: 5px;
+}
+
+/* TRACK */
+::-webkit-scrollbar-track {
+  background: #dfe3ea;
+  border-radius: 10px;
+}
+
+/* HANDLE */
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #111827, #374151);
+  border-radius: 10px;
+}
+
+/* HOVER */
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #000000, #1f2937);
+}

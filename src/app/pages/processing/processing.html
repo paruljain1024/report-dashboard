@@ -93,22 +93,31 @@
           </div>
         </div>
 
-        <p *ngIf="startTime">
+        <div class="status-rectangular">
 
-          ⏱ Start: {{ startTime }}
-        </p>
+  <div class="time-row">
 
-        <p *ngIf="endTime">
-          ✅ End: {{ endTime }}
-        </p>
+    <div class="time-box">
+      ⏱ Start: {{ startTime }}
+    </div>
 
-      </div>
-      <button
-       class="secondary-btn"
-       *ngIf="completed"
-       (click)="reprocessLogs()">
-        Reprocess Logs
-      </button>
+    <div class="time-box">
+      ✅ End: {{ endTime }}
+    </div>
+
+  </div>
+
+  <div class="reprocess-row">
+
+    <button
+      class="reprocess-btn"
+      (click)="reprocessLogs()">
+      Reprocess Logs
+    </button>
+
+  </div>
+
+</div>
       
 
     </div>

@@ -19,13 +19,13 @@
 }
 
 .logo-img {
-  height: 45px;
+  height: 50px;
 }
 
 /* CENTER BLOCK */
 .header-center {
   position: relative;
-  left: 10px; /* 🔥 adjust this value */
+  left: 20px; /* 🔥 adjust this value */
 
   display: flex;
   flex-direction: column;
@@ -36,7 +36,7 @@
 
 /* TITLE */
 .header-title {
-  font-size: 30px;   /* 🔥 bigger */
+  font-size: 40px;   /* 🔥 bigger */
   font-weight: 800;
   letter-spacing: 1px;
 
@@ -65,7 +65,7 @@
 .nav-item {
   text-decoration: none;
   color: #bbb;
-  font-size: 18px;
+  font-size: 20px;
   font-weight: 600;
   position: relative;
 }
